@@ -1,103 +1,151 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
+import MainVisual from '@/components/MainVisual'
+import CategoryModal from '@/components/CategoryModal'
+import ZKQuoteModal from '@/components/ZKQuoteModal'
+import { Category } from '@/types/category'
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [openPanels, setOpenPanels] = useState<{ category: Category; id: string }[]>([])
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Background music control
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        audioRef.current.play().catch(error => {
+          console.log('Audio play failed:', error)
+          setIsMusicPlaying(false)
+        })
+      } else {
+        audioRef.current.pause()
+      }
+    }
+  }, [isMusicPlaying])
+
+  // Auto-restart music when it ends
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      const handleEnded = () => {
+        if (isMusicPlaying) {
+          audio.currentTime = 0
+          audio.play().catch(error => {
+            console.log('Audio restart failed:', error)
+            setIsMusicPlaying(false)
+          })
+        }
+      }
+      
+      audio.addEventListener('ended', handleEnded)
+      return () => audio.removeEventListener('ended', handleEnded)
+    }
+  }, [isMusicPlaying])
+
+  const handleCategoryClick = (category: Category) => {
+    const panelId = `${category.id}-${Date.now()}`
+    
+    if (isMobile) {
+      // Mobile: Only one panel at a time
+      setOpenPanels([{ category, id: panelId }])
+    } else {
+      // Desktop: Max 2 panels
+      setOpenPanels(prev => {
+        // Check if category already open
+        const existingPanel = prev.find(panel => panel.category.id === category.id)
+        if (existingPanel) {
+          return prev // Don't open duplicate
+        }
+        
+        // Add new panel, remove oldest if more than 2
+        const newPanels = [...prev, { category, id: panelId }]
+        return newPanels.slice(-2) // Keep only last 2 panels
+      })
+    }
+  }
+
+  const handleClosePanel = (panelId: string) => {
+    setOpenPanels(prev => prev.filter(panel => panel.id !== panelId))
+  }
+
+  const handleMusicToggle = () => {
+    setIsMusicPlaying(!isMusicPlaying)
+  }
+
+  return (
+    <div className="relative w-full min-h-screen" style={{ backgroundColor: '#010F22' }}>
+      {/* Background Music */}
+      <audio
+        ref={audioRef}
+        src="/background-music.mp3"
+        preload="auto"
+        loop
+        style={{ display: 'none' }}
+      />
+      
+      {/* Header - Fixed */}
+      <div className="fixed top-0 left-0 right-0 z-40">
+        <Header 
+          isMusicPlaying={isMusicPlaying}
+          onMusicToggle={handleMusicToggle}
+        />
+      </div>
+      
+      {/* Main Content - Responsive height */}
+      <div className="relative w-full min-h-screen">
+        <MainVisual 
+          onCategoryClick={handleCategoryClick}
+        />
+      </div>
+      
+      {/* Footer - Fixed */}
+      <div className="fixed bottom-0 left-0 right-0 z-40">
+        <Footer />
+      </div>
+      
+      {/* Multiple Panels */}
+      {openPanels.map((panel, index) => {
+        // Use special modal for Prover ZK Quote
+        if (panel.category.id === 0) {
+          return (
+            <ZKQuoteModal
+              key={panel.id}
+              isOpen={true}
+              onClose={() => handleClosePanel(panel.id)}
+              category={panel.category}
+              zIndex={50 + index}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          )
+        }
+        
+        // Use normal modal for other categories
+        return (
+      <CategoryModal
+            key={panel.id}
+            isOpen={true}
+            onClose={() => handleClosePanel(panel.id)}
+            category={panel.category}
+            zIndex={50 + index}
+      />
+        )
+      })}
     </div>
-  );
+  )
 }

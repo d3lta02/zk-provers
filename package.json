@@ -1,12 +1,19 @@
 {
-  "name": "claude-code-test",
-  "version": "0.1.0",
+  "name": "succinct-quotes",
+  "version": "1.0.0",
   "private": true,
+  "description": "Interactive showcase for Succinct Technologies' blockchain solutions",
+  "keywords": ["succinct", "blockchain", "zk-proofs", "nextjs", "typescript"],
+  "author": "@Delta_web3",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next out dist",
+    "export": "next build && next export"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -23,5 +30,9 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "@eslint/eslintrc": "^3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
